@@ -11,3 +11,4 @@ apt-get install -y kubelet kubeadm kubectl
 
 ## 另外，你也可以指定版本安装
 ## apt-get install kubectl=1.21.3-00 kubelet=1.21.3-00 kubeadm=1.21.3-00
+
