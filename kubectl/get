@@ -1,1 +1,2 @@
 kubectl get node
+kubectl get cs
