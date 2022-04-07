@@ -1,6 +1,12 @@
 kubectl get node
+列出所有运行的Pod信息
+kubectl get pods
+列出Pod以及运行Pod节点信息
+kubectl get pods -o wide
 kubectl get nodes
 kubectl get cs
 kubectl get nodes -o wide
 kubectl get ns
+列出所有不同的资源对象
+kubectl get all
 kubectl get all  --all-namespaces
