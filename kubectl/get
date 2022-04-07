@@ -1,2 +1,3 @@
 kubectl get node
 kubectl get cs
+kubectl get nodes -o wide
