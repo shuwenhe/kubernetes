@@ -1,3 +1,4 @@
+kubectl get po
 kubectl get node
 列出所有运行的Pod信息
 kubectl get pods
