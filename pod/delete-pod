@@ -1,2 +1,3 @@
-kubectl删除pod命令sidsa-service-api
+kubectl删除pod命令
 kubectl get pod -n sidsa  | grep sidsa-service-api | awk  '{print $1}' | xargs kubectl -n sidsa delete pod
+kubectl get pod -n sidsa  | grep sidsa-service-realtime | awk  '{print $1}' | xargs kubectl -n sidsa delete pod
