@@ -15,7 +15,6 @@ metadata:
         'f:metadata':
           'f:annotations':
             .: {}
-            'f:kubectl.kubernetes.io/last-applied-configuration': {}
             'f:kubesphere.io/creator': {}
           'f:labels':
             .: {}
@@ -31,7 +30,6 @@ metadata:
               'f:port': {}
               'f:protocol': {}
               'f:targetPort': {}
-          'f:selector': {}
           'f:sessionAffinity': {}
           'f:type': {}
       manager: kubectl-client-side-apply
@@ -40,16 +38,20 @@ metadata:
     - apiVersion: v1
       fieldsType: FieldsV1
       fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            'f:kubectl.kubernetes.io/last-applied-configuration': {}
         'f:spec':
           'f:allocateLoadBalancerNodePorts': {}
           'f:externalTrafficPolicy': {}
+          'f:selector': {}
           'f:type': {}
       manager: ACK-Console Apache-HttpClient
       operation: Update
-      time: '2022-04-09T07:37:49Z'
+      time: '2022-04-21T01:38:57Z'
   name: sidsa-admin-ui
   namespace: sidsa
-  resourceVersion: '10615524'
+  resourceVersion: '10697348'
   uid: d5ad40b4-12b7-4c23-9c9d-690b1e61b813
 spec:
   clusterIP: 172.21.13.36
