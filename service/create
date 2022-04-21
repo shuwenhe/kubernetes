@@ -1,3 +1,8 @@
+create-service
+https://cs.console.aliyun.com/?spm=a2c63.p38356.0.0.5fb93bb5Xcjqum#/k8s/cluster/ccbdf99b67d43401ca4efa97df9c57ca1/v2/service/list?clusterType=Ask&profile=Serverless&state=running&ns=sidsa&region=cn-beijing
+container-service-for-kubernetes:manage-services
+https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/manage-services-1
+
 1.sidsa-admin
 名称：sidsa-admin
 类型：虚拟集群IP
@@ -41,3 +46,17 @@
 	名称：app
 	值：sidsa-service-realtime
 	
+4.sidsa-admin-ui
+名称：sidsa-admin-ui
+类型：虚拟集群IP
+端口映射：
+	名称：http-9527
+	服务端口：9527
+	容器端口：9527
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：sidsa-admin-ui
