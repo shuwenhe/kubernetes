@@ -1,0 +1,43 @@
+1.sidsa-admin
+名称：sidsa-admin
+类型：虚拟集群IP
+端口映射：
+	名称：http-8000
+	服务端口：8000
+	容器端口：8000
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：sidsa-admin
+
+2.sidsa-service-api
+名称：sidsa-service-api
+类型：虚拟集群IP
+端口映射：
+	名称：http-8990
+	服务端口：8990
+	容器端口：8990
+	协议：TCP
+注解：
+标签:
+	名称：app
+	值：sidsa-service-api
+	
+3.sidsa-service-realtime
+名称：sidsa-service-realtime
+类型：虚拟集群IP
+端口映射：
+	名称：http-8991
+	服务端口：8991
+	容器端口：8991
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：sidsa-service-realtime
+	
