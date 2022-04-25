@@ -7,7 +7,7 @@ Value: NIHAOSID86@2020ALY
 Name: DOCKER_USERNAME
 Value: SIDSA_ALY
 4.构建结果
-https://githubcom/sidsa-service/sid-ask/actions
+https://github.com/sidsa-service/sid-ask/actions
 5.镜像仓库查看最新镜像
 apiVersion: apps/v1
 kind: Deployment
