@@ -1,0 +1,6 @@
+1.Makefile
+2.把sidsa-service的.github目录复制过来
+3.配置下Actions secrets
+https://github.com/sidsa-service/sid-ask/settings/secrets/actions
+DOCKER_PASSWORD 填 NIHAOSID86@2020ALY
+DOCKER_USERNAME 填 SIDSA_ALY
