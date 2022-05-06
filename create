@@ -1,0 +1,3 @@
+# 创建Deployment和Service资源
+kubectl create -f demo-deployment.yaml
+kubectl create -f demo-service.yaml
