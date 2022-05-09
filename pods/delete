@@ -8,3 +8,5 @@ sidsa-admin
 kubectl get pod -n sidsa | grep sidsa-admin | awk '{print $1}' | xargs kubectl -n sidsa delete pod
 sid-ask
 kubectl get pod -n sidsa | grep sid-ask | awk '{print $1}' | xargs kubectl -n sidsa delete pod
+iot-java-demo
+kubectl get pod -n sidsa | grep iot-java-demo | awk '{print $1}' | xargs kubectl -n sidsa delete pod
