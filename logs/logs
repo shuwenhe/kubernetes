@@ -5,4 +5,4 @@ kubectl logs -f sidsa-admin-5cc84f46d5-sthfk -n sidsa
 kubectl logs -f sidsa-service-api-6665c8ccbb-d6b4d -n sidsa
 kubectl logs -f sidsa-service-realtime-6698d8447-7mc5j -n sidsa
 
- kubectl logs -f iot-java-demo-6dcb4684b4-4njx9 -n sidsa > variable.log 2>&1
+kubectl logs -f iot-java-demo-6dcb4684b4-4njx9 -n sidsa > variable.log 2>&1
