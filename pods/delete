@@ -10,3 +10,7 @@ sid-ask
 kubectl get pod -n sidsa | grep sid-ask | awk '{print $1}' | xargs kubectl -n sidsa delete pod
 iot-java-demo
 kubectl get pod -n sidsa | grep iot-java-demo | awk '{print $1}' | xargs kubectl -n sidsa delete pod
+负载均衡 SLB
+https://slb.console.aliyun.com/slb/cn-beijing/certs
+证书管理->替换证书
+
