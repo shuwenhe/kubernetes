@@ -1,0 +1,2 @@
+启动nginx实例
+kubectl run nginx --image=nginx
