@@ -1,4 +1,4 @@
-This is LuaHBTeX, Version 1.16.1 (MiKTeX 23.4) (format=lualatex 2023.6.13)  11 JUL 2023 09:33
+This is LuaHBTeX, Version 1.16.1 (MiKTeX 23.4) (format=lualatex 2023.6.13)  11 JUL 2023 09:34
  restricted system commands enabled.
 **kubernetes.tex
 (./kubernetes.tex
@@ -1234,8 +1234,14 @@ Removing  `ltj.listings_unicode' from `process_input_buffer'. [4
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
-Package rerunfilecheck Info: File `kubernetes.out' has not changed.
-(rerunfilecheck)             Checksum: 497B2FC1A3C941337CA4E16C4B1BF509;472.
+
+Package rerunfilecheck Warning: File `kubernetes.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `kubernetes.out':
+(rerunfilecheck)             Before: 497B2FC1A3C941337CA4E16C4B1BF509;472
+(rerunfilecheck)             After:  E4122BB8DCC08EBCD3A2A5EC5FA498FB;462.
 )
 
 Here is how much of LuaTeX's memory you used:
@@ -1253,7 +1259,7 @@ c, 19 attribute_list, 2 write, 10 user_defined nodes
 s/simhei.ttf><C:/Windows/Fonts/simsun.ttc><//?/c:/ctex/miktex/fonts/opentype/pub
 lic/lm/lmroman12-regular.otf><//?/c:/ctex/miktex/fonts/opentype/public/lm/lmroma
 n17-regular.otf><C:/CTEX/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on kubernetes.pdf (4 pages, 37670 bytes).
+Output written on kubernetes.pdf (4 pages, 37668 bytes).
 
 PDF statistics: 106 PDF objects out of 1000 (max. 8388607)
  27 named destinations out of 1000 (max. 131072)
