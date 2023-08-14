@@ -112,15 +112,15 @@ kubectl logs -f iot-java-demo-6dcb4684b4-4njx9 -n sidsa > variable.log 2>&1
 \chapter{delete}
 \section{delete}
 \begin{lstlisting}[language=C++,breaklines=true]
-1.all pod
+0.all pod
 kubectl get pod --all-namespaces
-2.sidsa-service-api
+1.sidsa-service-api
 kubectl get pod -n sidsa | grep sidsa-service-api | awk '{print $1}' | xargs kubectl -n sidsa delete pod
-3.sidsa-service-realtime
+2.sidsa-service-realtime
 kubectl get pod -n sidsa | grep sidsa-service-realtime | awk '{print $1}' | xargs kubectl -n sidsa delete pod
-4.iot-java-demo
+3.iot-java-demo
 kubectl get pod -n sidsa | grep iot-java-demo | awk '{print $1}' | xargs kubectl -n sidsa delete pod
-5.sidsa-admin
+4.sidsa-admin
 kubectl get pod -n sidsa | grep sidsa-admin | awk '{print $1}' | xargs kubectl -n sidsa delete pod
 \end{lstlisting}
 
