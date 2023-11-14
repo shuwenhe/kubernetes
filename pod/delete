@@ -1,4 +1,4 @@
-kubectl get pod --all-namespaces
+kubectl get pods --all-namespaces
 kubectl删除pod命令
 
 sidsa-service-api
