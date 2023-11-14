@@ -1,0 +1,5 @@
+install & set kubectl
+brew install kubectl
+https://kubernetes.io/docs/tasks/tools/?spm=5176.2020520152.0.0.797316ddYmQ2mM
+在 macOS 系统上安装 kubectl 
+https://kubernetes.io/zh-cn/docs/tasks/tools/install-kubectl-macos/#install-kubectl-on-macos
