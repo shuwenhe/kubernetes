@@ -1,0 +1,4 @@
+虚拟 IP 和服务代理
+https://kubernetes.io/zh-cn/docs/reference/networking/virtual-ips/
+kube-proxy
+https://kubernetes.io/zh-cn/docs/reference/command-line-tools-reference/kube-proxy/
