@@ -1,0 +1,31 @@
+1.更新包索引并升级系统
+sudo apt-get update
+sudo apt-get upgrade -y
+2.安装 Docker Engine
+卸载旧版本
+sudo apt-get remove docker docker-engine docker.io containerd runc
+安装依赖项
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+启动 Docker 服务并设置开机自启
+sudo systemctl start docker
+sudo systemctl enable docker
+3.添加 Kubernetes 官方仓库
+curl -fsS https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/kubernetes-archive-keyring.gpg
+4.配置 apt 软件包源
+/etc/apt/sources.list.d/kubernetes.list
+# 对于 Ubuntu 20.04 (Focal Fossa)
+echo "deb [trusted=yes] https://packages.cloud.google.com/apt <version> main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+# 替换版本号，例如使用最新的稳定版
+echo "deb [trusted=yes] https://packages.cloud.google.com/apt kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+5.安装 kubeadm, kubelet 和 kubectl
+sudo apt-get update
+sudo apt-get install -y kubeadm kubelet kubectl
+sudo snap install kubeadm --classic
+sudo snap install kubectl --classic
+6.验证安装
+检查版本
+kubeadm version
+kubectl version --short
+验证 kubelet 是否正在运行且状态良好
+systemctl status kubelet  # 可能需要 `sudo` 权限才能看到，或者使用 journalctl 查看日志：journalctl -u kubelet.service
+
