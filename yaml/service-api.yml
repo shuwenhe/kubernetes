@@ -3,10 +3,10 @@ kind: Service
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: >
-      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"sidsa-service-api"},"name":"sidsa-service-api","namespace":"sidsa"},"spec":{"ports":[{"name":"http-8990","nodePort":30455,"port":8990,"protocol":"TCP","targetPort":8990}],"selector":{"app":"sidsa-service-api"},"sessionAffinity":"None","type":"NodePort"}}
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"shuwen-service-api"},"name":"shuwen-service-api","namespace":"shuwen"},"spec":{"ports":[{"name":"http-8990","nodePort":30455,"port":8990,"protocol":"TCP","targetPort":8990}],"selector":{"app":"shuwen-service-api"},"sessionAffinity":"None","type":"NodePort"}}
   creationTimestamp: '2022-04-08T11:03:49Z'
   labels:
-    app: sidsa-service-api
+    app: shuwen-service-api
   managedFields:
     - apiVersion: v1
       fieldsType: FieldsV1
@@ -43,8 +43,8 @@ metadata:
       manager: ACK-Console Apache-HttpClient
       operation: Update
       time: '2022-04-09T07:39:22Z'
-  name: sidsa-service-api
-  namespace: sidsa
+  name: shuwen-service-api
+  namespace: shuwen
   resourceVersion: '4703566'
   uid: 893f2d44-81d5-4611-ac5e-13aac11641f1
 spec:
@@ -61,7 +61,7 @@ spec:
       protocol: TCP
       targetPort: 8990
   selector:
-    app: sidsa-service-api
+    app: shuwen-service-api
   sessionAffinity: None
   type: ClusterIP
 status:

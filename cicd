@@ -1,13 +1,13 @@
 1.Makefile
-2.把sidsa-service的.github目录复制过来
+2.把shuwen-service的.github目录复制过来
 3.配置下Actions secrets
-https://github.com/sidsa-service/sid-ask/settings/secrets/actions
+https://github.com/shuwen-service/sid-ask/settings/secrets/actions
 Name: DOCKER_PASSWORD
 Value: NIHAOSID86@2020ALY
 Name: DOCKER_USERNAME
-Value: SIDSA_ALY
+Value: shuwen_ALY
 4.构建结果
-https://github.com/sidsa-service/sid-ask/actions
+https://github.com/shuwen-service/sid-ask/actions
 5.镜像仓库查看最新镜像
 apiVersion: apps/v1
 kind: Deployment
@@ -16,7 +16,7 @@ metadata:
   labels:
     app: sid-ask
   name: sid-ask
-  namespace: sidsa
+  namespace: shuwen
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -40,7 +40,7 @@ spec:
             - '-c=/etc/sid-ask/config/settings.dev.yml'
           command:
             - /sid-ask
-          image: 'registry.cn-beijing.aliyuncs.com/sidsa/sid-ask:latest'
+          image: 'registry.cn-beijing.aliyuncs.com/shuwen/sid-ask:latest'
           imagePullPolicy: Always
           name: sid-ask
           ports:
@@ -78,7 +78,7 @@ metadata:
   labels:
     app: sid-ask
   name: sid-ask
-  namespace: sidsa
+  namespace: shuwen
 spec:
   ports:
     - name: http-8000

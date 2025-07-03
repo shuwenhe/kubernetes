@@ -3,11 +3,11 @@ kind: Service
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: >
-      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{"kubesphere.io/creator":"admin"},"labels":{"app":"sidsa-admin-ui"},"name":"sidsa-admin-ui","namespace":"sidsa"},"spec":{"ports":[{"name":"http-8000","port":8000,"protocol":"TCP","targetPort":8000}],"selector":{"app":"sidsa-admin-ui"},"sessionAffinity":"None","type":"ClusterIP"}}
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{"kubesphere.io/creator":"admin"},"labels":{"app":"shuwen-admin-ui"},"name":"shuwen-admin-ui","namespace":"shuwen"},"spec":{"ports":[{"name":"http-8000","port":8000,"protocol":"TCP","targetPort":8000}],"selector":{"app":"shuwen-admin-ui"},"sessionAffinity":"None","type":"ClusterIP"}}
     kubesphere.io/creator: admin
   creationTimestamp: '2022-04-21T00:22:52Z'
   labels:
-    app: sidsa-admin-ui
+    app: shuwen-admin-ui
   managedFields:
     - apiVersion: v1
       fieldsType: FieldsV1
@@ -49,8 +49,8 @@ metadata:
       manager: ACK-Console Apache-HttpClient
       operation: Update
       time: '2022-04-21T01:38:57Z'
-  name: sidsa-admin-ui
-  namespace: sidsa
+  name: shuwen-admin-ui
+  namespace: shuwen
   resourceVersion: '10697348'
   uid: d5ad40b4-12b7-4c23-9c9d-690b1e61b813
 spec:
@@ -67,7 +67,7 @@ spec:
       protocol: TCP
       targetPort: 9527
   selector:
-    app: sidsa-admin-ui
+    app: shuwen-admin-ui
   sessionAffinity: None
   type: ClusterIP
 status:
