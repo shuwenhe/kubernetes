@@ -29,3 +29,16 @@ kubectl version --short
 验证 kubelet 是否正在运行且状态良好
 systemctl status kubelet  # 可能需要 `sudo` 权限才能看到，或者使用 journalctl 查看日志：journalctl -u kubelet.service
 
+
+初始化主节点
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+配置 kubectl（主节点上）
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+安装网络插件（例如 flannel）
+
+查看节点
+kubectl get nodes
+
+
