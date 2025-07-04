@@ -91,6 +91,196 @@ kubectl cluster-info
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.1/nvidia-device-plugin.yml
 
 七、资源调度与统一使用
+1. 00-node-prepare.sh （所有节点都必须先执行一次）
+#!/usr/bin/env bash
+# 00-node-prepare.sh
+# 通用初始化：关闭 swap、配置内核、安装 containerd + kubeadm/kubelet/kubectl
+
+set -euo pipefail
+K8S_VERSION="1.28"
+ARCH=$(dpkg --print-architecture)
+
+echo "[Step 1] 禁用 swap"
+swapoff -a
+sed -i '/ swap / s/^/#/' /etc/fstab
+
+echo "[Step 2] 内核模块 & sysctl"
+modprobe br_netfilter
+cat <<'EOF' >/etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+sysctl --system
+
+echo "[Step 3] 安装 containerd"
+apt-get update -y
+apt-get install -y containerd
+mkdir -p /etc/containerd
+containerd config default >/etc/containerd/config.toml
+sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+systemctl restart containerd
+systemctl enable containerd
+
+echo "[Step 4] 添加 Kubernetes APT 源"
+apt-get install -y apt-transport-https ca-certificates curl gnupg
+mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key \
+  | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/ /" \
+  >/etc/apt/sources.list.d/kubernetes.list
+
+echo "[Step 5] 安装 kubeadm kubelet kubectl ${K8S_VERSION}.x"
+apt-get update -y
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+systemctl enable kubelet
+
+echo "=== 节点通用准备完成 ==="
+
+sudo chmod +x 00-node-prepare.sh
+sudo ./00-node-prepare.sh
+
+2. 10-master-init.sh （仅在 shuwen1 主节点执行）
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+3. 20-worker-join.sh （在 shuwen2、shuwen3执行）
+#!/usr/bin/env bash
+# 20-worker-join.sh
+# 调用 master 生成的 join.sh 加入集群
+
+set -euo pipefail
+
+if [[ ! -f /root/join.sh ]]; then
+  echo "未找到 /root/join.sh，请先从 master 节点复制该文件！"
+  exit 1
+fi
+
+echo "[Worker] 加入 Kubernetes 集群..."
+bash /root/join.sh
+
+echo "=== 工作节点已成功加入集群 ==="
+
+使用顺序
+1.三台机器都执行
+chmod +x 00-node-prepare.sh
+sudo ./00-node-prepare.sh
+2.在 shuwen1 (192.168.10.2) 执行
+chmod +x 10-master-init.sh
+sudo ./10-master-init.sh
+3.将 /root/join.sh 从 shuwen1 复制到 shuwen2 / shuwen3
+4.在 shuwen2 / shuwen3 执行
+chmod +x 20-worker-join.sh
+sudo ./20-worker-join.sh
+5.回到 master 验证
+kubectl get nodes
+
+GPU 支持（如有 NVIDIA GPU）
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.1/nvidia-device-plugin.yml
 
 
 1.更新包索引并升级系统
