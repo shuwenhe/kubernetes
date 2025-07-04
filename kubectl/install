@@ -1,0 +1,72 @@
+Install kubectl binary with curl on Linux
+在 Linux 上使用 curl 安装 kubectl 二进制文件
+
+1.Download the latest release with the command:
+使用以下命令下载最新版本：
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+For example, to download version 1.33.0 on Linux x86-64, type:
+例如，要在 Linux x86-64 上下载版本 1.33.0，请输入：
+curl -LO https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl
+
+2.Validate the binary (optional)
+验证二进制文件（可选）
+Download the kubectl checksum file:
+下载 kubectl 校验和文件：
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+Validate the kubectl binary against the checksum file:
+根据校验和文件验证 kubectl 二进制文件：
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+If valid, the output is:
+如果有效，则输出为：
+curl -LO https://dl.k8s.io/release/v1.33.0/bin/linux/amd64/kubectl
+
+3.Install kubectl  安装 kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+4.Test to ensure the version you installed is up-to-date:
+测试以确保您安装的版本是最新的：
+kubectl version --client
+Or use this for detailed view of version:
+或者使用这个来查看版本的详细情况：
+kubectl version --client --output=yaml
+
+Verify kubectl configuration
+验证 kubectl 配置 
+kubectl 配置位于 
+~/.kube/config
+
+重新正确安装 kubelet
+1.确保你是用 APT 安装的 Kubernetes，而不是 snap 安装
+# 删除 snap 版（如果有装）
+sudo snap remove kubelet kubectl kubeadm 2>/dev/null
+2.重新用 APT 安装 kubelet/kubeadm/kubectl：
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+然后验证：
+which kubelet
+kubelet --version
+应该能看到：
+/usr/bin/kubelet
+Kubernetes v1.33.x
+3.启用并启动 kubelet 服务：
+sudo systemctl enable kubelet
+sudo systemctl start kubelet
+4. 禁用 swap（推荐）
+sudo swapoff -a
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
+5.重新初始化集群
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+使用阿里云 Kubernetes 镜像源 替换官方源为阿里云源
+sudo tee /etc/apt/sources.list.d/kubernetes.list <<EOF
+deb https://mirrors.aliyun.com/kubernetes/apt/ kubernetes-xenial main
+EOF
+curl -fsSL https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | sudo apt-key add -
+然后重新安装：
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+
+
