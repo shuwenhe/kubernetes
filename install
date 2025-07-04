@@ -1,3 +1,21 @@
+# 1️⃣ 在 shuwen1 以 root 身份执行
+chmod +x setup-master.sh
+sudo ./setup-master.sh          # 或指定 IP/CIDR/版本
+
+# 2️⃣ 将 /root/join.sh 拷贝到 shuwen2 / shuwen3
+scp root@192.168.10.2:/root/join.sh .
+
+# 3️⃣ 在每台 worker
+chmod +x setup-worker.sh join.sh
+sudo JOIN_COMMAND="$(cat join.sh)" ./setup-worker.sh
+# 或者:
+#   sudo ./setup-worker.sh <master-ip> <token> <hash>
+
+完成后 在 master 上验证：
+kubectl get nodes
+kubectl get pods -A
+
+
 所有节点：系统基础准备
 1. 禁用 swap
 sudo swapoff -a
