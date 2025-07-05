@@ -1,95 +1,94 @@
-#!/usr/bin/env bash
-# setup-master.sh - Kubernetes master node automated installer
-# Usage: sudo ./setup-master.sh [MASTER_IP] [POD_CIDR] [K8S_VERSION]
-#   MASTER_IP   : 控制平面节点在局域网中的 IP（默认取本机第一块非回环网卡 IP）
-#   POD_CIDR    : Pod 网络段（默认 10.244.0.0/16，匹配 Flannel 默认）
-#   K8S_VERSION : 次版本号，例如 1.33（默认 1.33）
+#!/bin/bash
+set -e
 
-set -euo pipefail
+# === 参数配置 ===
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+K8S_VERSION="v1.33.2"
+PAUSE_VERSION="3.10"
+ETCD_VERSION="3.5.10-0"
+COREDNS_VERSION="v1.11.1"
+IMAGE_REPO="registry.cn-hangzhou.aliyuncs.com/google_containers"
 
-MASTER_IP=${1:-$(hostname -I | awk '{print $1}')}
-POD_CIDR=${2:-"10.244.0.0/16"}
-K8S_VERSION=${3:-"1.33"}
-
-step() { echo -e "\e[32m[STEP]\e[0m $*"; }
-
-step "参数确认"
+echo "[STEP] 开始安装 Kubernetes 主节点"
 echo "Master IP      : $MASTER_IP"
 echo "Pod CIDR       : $POD_CIDR"
 echo "Kubernetes ver : $K8S_VERSION"
 
-############################################
-# 1. 关闭 swap
-############################################
-step "关闭 swap"
-swapoff -a
-sed -i '/ swap / s/^/#/' /etc/fstab
+# === 关闭 swap ===
+echo "[STEP] 关闭 swap"
+sudo swapoff -a
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
-############################################
-# 2. 内核参数设置
-############################################
-step "配置内核参数"
-modprobe br_netfilter
-cat <<EOF >/etc/sysctl.d/k8s.conf
-net.bridge.bridge-nf-call-iptables=1
-net.bridge.bridge-nf-call-ip6tables=1
-net.ipv4.ip_forward=1
-EOF
-sysctl --system
+# === 安装依赖 ===
+echo "[STEP] 安装依赖组件"
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
 
-############################################
-# 3. 安装 containerd
-############################################
-step "安装 containerd"
-apt-get update -y
-apt-get install -y containerd
-mkdir -p /etc/containerd
-containerd config default >/etc/containerd/config.toml
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-systemctl restart containerd
-systemctl enable containerd
+# === 安装 containerd ===
+echo "[STEP] 安装 containerd"
+sudo apt-get install -y containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml > /dev/null
 
-############################################
-# 4. 安装 kubeadm / kubelet / kubectl
-############################################
-step "安装 kube 组件"
-apt-get install -y apt-transport-https ca-certificates curl gnupg
-mkdir -p -m 755 /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/ /" > /etc/apt/sources.list.d/kubernetes.list
-apt-get update -y
-apt-get install -y kubelet kubeadm kubectl
-apt-mark hold kubelet kubeadm kubectl
+# 修改 pause 镜像源
+sudo sed -i 's#registry.k8s.io/pause:.*#registry.aliyuncs.com/google_containers/pause:'$PAUSE_VERSION'#' /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd
 
-############################################
-# 5. 初始化控制平面
-############################################
-step "kubeadm init"
-kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+# === 添加 Kubernetes 仓库 ===
+echo "[STEP] 添加 Kubernetes 仓库"
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VERSION%.*}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VERSION%.*}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
 
-############################################
-# 6. 配置 kubectl
-############################################
-step "配置 kubectl"
+# === 安装 kubeadm, kubelet, kubectl ===
+echo "[STEP] 安装 kubeadm kubelet kubectl"
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+# === 拉取并替换镜像 ===
+echo "[STEP] 拉取 Kubernetes 镜像并替换 tag"
+images=(
+  kube-apiserver:$K8S_VERSION
+  kube-controller-manager:$K8S_VERSION
+  kube-scheduler:$K8S_VERSION
+  kube-proxy:$K8S_VERSION
+  pause:$PAUSE_VERSION
+  etcd:$ETCD_VERSION
+  coredns:$COREDNS_VERSION
+)
+
+for image in "${images[@]}"; do
+  src_image="$IMAGE_REPO/${image}"
+  dst_image="registry.k8s.io/${image}"
+  echo "拉取镜像 $src_image 并标记为 $dst_image"
+  sudo ctr -n k8s.io i pull docker.io/${src_image}
+  sudo ctr -n k8s.io i tag docker.io/${src_image} ${dst_image}
+done
+
+# === 初始化 Kubernetes 主节点 ===
+echo "[STEP] 初始化 Kubernetes Master 节点"
+sudo kubeadm init \
+  --apiserver-advertise-address=${MASTER_IP} \
+  --image-repository=${IMAGE_REPO} \
+  --kubernetes-version=${K8S_VERSION} \
+  --pod-network-cidr=${POD_CIDR}
+
+# === 配置 kubectl ===
+echo "[STEP] 设置 kubectl 配置"
 mkdir -p $HOME/.kube
-cp /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-############################################
-# 7. 安装 Flannel 网络插件
-############################################
-step "安装 Flannel CNI"
-kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+# === 安装 Flannel 网络插件 ===
+echo "[STEP] 安装 Flannel 网络插件（国内源）"
+wget https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml -O kube-flannel.yml
+sed -i 's#quay.io/coreos#docker.io/flannelio#g' kube-flannel.yml
+kubectl apply -f kube-flannel.yml
 
-############################################
-# 8. 生成 worker join 脚本
-############################################
-step "生成 join.sh"
-kubeadm token create --print-join-command >/root/join.sh
-chmod +x /root/join.sh
+echo "✅ 主节点初始化完成！"
+echo "请将以下 join 命令复制到 Worker 节点执行："
+kubeadm token create --print-join-command
 
-step "完成！"
-echo "=============================================================="
-echo "已在 /root/join.sh 生成工作节点加入脚本，请复制到 worker 节点执行。"
-echo "或者在运行 setup-worker.sh 时，将 join 命令作为环境变量传递。"
-echo "=============================================================="

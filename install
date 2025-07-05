@@ -1,3 +1,72 @@
+一、配置 kubeadm 使用国内镜像源
+Kubernetes 所需的镜像如下（以 v1.33.2 为例）：
+registry.k8s.io/kube-apiserver:v1.33.2
+registry.k8s.io/kube-controller-manager:v1.33.2
+registry.k8s.io/kube-scheduler:v1.33.2
+registry.k8s.io/kube-proxy:v1.33.2
+registry.k8s.io/pause:3.10
+registry.k8s.io/etcd:3.5.10-0
+registry.k8s.io/coredns/coredns:v1.11.1
+这些镜像在国内访问缓慢，我们可以使用 阿里云镜像源 或 [Docker Hub 中的替代地址]。
+ 方法一：拉取国内镜像并重新 tag（推荐）
+#!/usr/bin/env bash
+K8S_VERSION=v1.33.2
+PAUSE_VERSION=3.10
+ETCD_VERSION=3.5.10-0
+COREDNS_VERSION=v1.11.1
+
+# 国内镜像源（七牛云）
+REGISTRY=registry.cn-hangzhou.aliyuncs.com/google_containers
+
+# 拉取并重新 tag
+images=(
+  kube-apiserver:$K8S_VERSION
+  kube-controller-manager:$K8S_VERSION
+  kube-scheduler:$K8S_VERSION
+  kube-proxy:$K8S_VERSION
+  pause:$PAUSE_VERSION
+  etcd:$ETCD_VERSION
+  coredns:$COREDNS_VERSION
+)
+
+for image in "${images[@]}"; do
+  src_image="$REGISTRY/${image}"
+  dst_image="registry.k8s.io/${image}"
+  echo "拉取镜像 $src_image 并标记为 $dst_image"
+  docker pull $src_image
+  docker tag  $src_image $dst_image
+  docker rmi  $src_image
+done
+
+然后执行：
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 \
+  --apiserver-advertise-address=192.168.10.2 \
+  --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers \
+  --kubernetes-version=v1.33.2
+二、修改 containerd 默认 Pause 镜像源
+containerd 默认使用 registry.k8s.io/pause:3.8，我们可以手动指定为国内源，例如：
+sudo nano /etc/containerd/config.toml
+查找并修改如下部分：
+[plugins."io.containerd.grpc.v1.cri".sandbox_image]
+  sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.10"
+然后重新启动 containerd：
+sudo systemctl restart containerd
+三、替换 Flannel 镜像源（可选）
+Flannel 默认使用 quay.io，国内访问较慢。建议切换为镜像站地址：
+# 修改 kube-flannel.yaml 的镜像地址：
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+# 下载后手动替换：
+wget https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+sed -i 's#quay.io/coreos#docker.io/flannelio#g' kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+四、验证镜像
+docker images | grep registry.k8s.io
+或
+ctr -n k8s.io images ls
+确保所有组件镜像已存在后再执行 kubeadm init。
+
+
 # 1️⃣ 在 shuwen1 以 root 身份执行
 chmod +x setup-master.sh
 sudo ./setup-master.sh          # 或指定 IP/CIDR/版本
