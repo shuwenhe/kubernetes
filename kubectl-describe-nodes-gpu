@@ -1,0 +1,2 @@
+sudo kubectl describe nodes | egrep "Name:|Allocatable:|cpu:|memory:|nvidia.com/gpu"
+
