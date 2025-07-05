@@ -1,0 +1,13 @@
+1.Disable Swap Temporarily暂时禁用交换
+sudo swapoff -a
+2.Make Sure Swap Is Disabled Permanently确保永久禁用交换
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
+3.Restart kubelet重启 cubelet
+sudo systemctl restart kubelet
+4.Verify the Kubelet Service验证 Kubelet 服务
+sudo systemctl status kubelet
+5.Check Node Status检查节点状态
+sudo kubectl get nodes
+
+
+
