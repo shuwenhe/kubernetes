@@ -1,1 +1,1 @@
-kubectl get nodes
+sudo kubectl get nodes
