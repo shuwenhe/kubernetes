@@ -1,3 +1,8 @@
+master
+
+worker
+sudo JOIN_COMMAND="$(cat ./join.sh)" ./setup-worker.sh
+
 一、配置 kubeadm 使用国内镜像源
 Kubernetes 所需的镜像如下（以 v1.33.2 为例）：
 registry.k8s.io/kube-apiserver:v1.33.2
