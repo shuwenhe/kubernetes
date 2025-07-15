@@ -1,0 +1,2 @@
+sudo sed -i '/--container-runtime/d' /etc/systemd/system/kubelet.service.d/10-runtime.conf
+

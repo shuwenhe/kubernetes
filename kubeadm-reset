@@ -1,0 +1,2 @@
+sudo kubeadm reset -f
+

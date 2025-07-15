@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: >
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{"kubesphere.io/creator":"admin"},"labels":{"app":"shuwen-service-realtime"},"name":"shuwen-service-realtime","namespace":"shuwen"},"spec":{"ports":[{"name":"http-8991","port":8991,"protocol":"TCP","targetPort":8991}],"selector":{"app":"shuwen-service-realtime"},"sessionAffinity":"None","type":"ClusterIP"}}
+    kubesphere.io/creator: admin
+  creationTimestamp: '2022-04-08T11:11:21Z'
+  labels:
+    app: shuwen-service-realtime
+  managedFields:
+    - apiVersion: v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:metadata':
+          'f:annotations':
+            .: {}
+            'f:kubectl.kubernetes.io/last-applied-configuration': {}
+            'f:kubesphere.io/creator': {}
+          'f:labels':
+            .: {}
+            'f:app': {}
+        'f:spec':
+          'f:internalTrafficPolicy': {}
+          'f:ports':
+            .: {}
+            'k:{"port":8991,"protocol":"TCP"}':
+              .: {}
+              'f:name': {}
+              'f:port': {}
+              'f:protocol': {}
+              'f:targetPort': {}
+          'f:selector': {}
+          'f:sessionAffinity': {}
+      manager: kubectl-client-side-apply
+      operation: Update
+      time: '2022-04-08T11:11:21Z'
+    - apiVersion: v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        'f:spec':
+          'f:allocateLoadBalancerNodePorts': {}
+          'f:externalTrafficPolicy': {}
+          'f:type': {}
+      manager: ACK-Console Apache-HttpClient
+      operation: Update
+      time: '2022-04-09T07:39:56Z'
+  name: shuwen-service-realtime
+  namespace: shuwen
+  resourceVersion: '4703632'
+  uid: 4a583885-fc08-44db-a1ef-d15cf5f0b70e
+spec:
+  clusterIP: 172.21.1.176
+  clusterIPs:
+    - 172.21.1.176
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - name: http-8991
+      port: 8991
+      protocol: TCP
+      targetPort: 8991
+  selector:
+    app: shuwen-service-realtime
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

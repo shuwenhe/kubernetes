@@ -1,0 +1,752 @@
+master
+
+worker
+sudo JOIN_COMMAND="$(cat ./join.sh)" ./setup-worker.sh
+
+一、配置 kubeadm 使用国内镜像源
+Kubernetes 所需的镜像如下（以 v1.33.2 为例）：
+registry.k8s.io/kube-apiserver:v1.33.2
+registry.k8s.io/kube-controller-manager:v1.33.2
+registry.k8s.io/kube-scheduler:v1.33.2
+registry.k8s.io/kube-proxy:v1.33.2
+registry.k8s.io/pause:3.10
+registry.k8s.io/etcd:3.5.10-0
+registry.k8s.io/coredns/coredns:v1.11.1
+这些镜像在国内访问缓慢，我们可以使用 阿里云镜像源 或 [Docker Hub 中的替代地址]。
+ 方法一：拉取国内镜像并重新 tag（推荐）
+#!/usr/bin/env bash
+K8S_VERSION=v1.33.2
+PAUSE_VERSION=3.10
+ETCD_VERSION=3.5.10-0
+COREDNS_VERSION=v1.11.1
+
+# 国内镜像源（七牛云）
+REGISTRY=registry.cn-hangzhou.aliyuncs.com/google_containers
+
+# 拉取并重新 tag
+images=(
+  kube-apiserver:$K8S_VERSION
+  kube-controller-manager:$K8S_VERSION
+  kube-scheduler:$K8S_VERSION
+  kube-proxy:$K8S_VERSION
+  pause:$PAUSE_VERSION
+  etcd:$ETCD_VERSION
+  coredns:$COREDNS_VERSION
+)
+
+for image in "${images[@]}"; do
+  src_image="$REGISTRY/${image}"
+  dst_image="registry.k8s.io/${image}"
+  echo "拉取镜像 $src_image 并标记为 $dst_image"
+  docker pull $src_image
+  docker tag  $src_image $dst_image
+  docker rmi  $src_image
+done
+
+然后执行：
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 \
+  --apiserver-advertise-address=192.168.10.2 \
+  --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers \
+  --kubernetes-version=v1.33.2
+二、修改 containerd 默认 Pause 镜像源
+containerd 默认使用 registry.k8s.io/pause:3.8，我们可以手动指定为国内源，例如：
+sudo nano /etc/containerd/config.toml
+查找并修改如下部分：
+[plugins."io.containerd.grpc.v1.cri".sandbox_image]
+  sandbox_image = "registry.aliyuncs.com/google_containers/pause:3.10"
+然后重新启动 containerd：
+sudo systemctl restart containerd
+三、替换 Flannel 镜像源（可选）
+Flannel 默认使用 quay.io，国内访问较慢。建议切换为镜像站地址：
+# 修改 kube-flannel.yaml 的镜像地址：
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+# 下载后手动替换：
+wget https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+sed -i 's#quay.io/coreos#docker.io/flannelio#g' kube-flannel.yml
+kubectl apply -f kube-flannel.yml
+四、验证镜像
+docker images | grep registry.k8s.io
+或
+ctr -n k8s.io images ls
+确保所有组件镜像已存在后再执行 kubeadm init。
+
+
+# 1️⃣ 在 shuwen1 以 root 身份执行
+chmod +x setup-master.sh
+sudo ./setup-master.sh          # 或指定 IP/CIDR/版本
+
+# 2️⃣ 将 /root/join.sh 拷贝到 shuwen2 / shuwen3
+scp root@192.168.10.2:/root/join.sh .
+
+# 3️⃣ 在每台 worker
+chmod +x setup-worker.sh join.sh
+sudo JOIN_COMMAND="$(cat join.sh)" ./setup-worker.sh
+# 或者:
+#   sudo ./setup-worker.sh <master-ip> <token> <hash>
+
+完成后 在 master 上验证：
+kubectl get nodes
+kubectl get pods -A
+
+
+所有节点：系统基础准备
+1. 禁用 swap
+sudo swapoff -a
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
+2. 系统参数优化
+sudo modprobe br_netfilter
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables=1
+net.bridge.bridge-nf-call-ip6tables=1
+net.ipv4.ip_forward=1
+EOF
+
+sudo sysctl --system
+安装 containerd 容器运行时
+在所有节点执行
+sudo apt update && sudo apt install -y containerd
+
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+
+# 修改为 Systemd cgroup 驱动（重要）
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+安装 Kubernetes 组件
+所有节点都执行
+sudo apt update && sudo apt install -y apt-transport-https ca-certificates curl gnupg
+
+# 添加 Kubernetes GPG 密钥
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# 添加源（v1.33 可替换）
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /" | \
+  sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt update
+
+# 安装 kubeadm、kubelet、kubectl
+sudo apt install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+shuwen1 (主节点) 初始化 Kubernetes 集群
+sudo kubeadm init --apiserver-advertise-address=192.168.10.2 --pod-network-cidr=10.244.0.0/16
+记录输出中的类似如下的 kubeadm join 命令，稍后在 worker 节点使用：
+
+配置 kubectl 命令行（仅 shuwen1 主节点）
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+
+安装网络插件（Flannel）
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+在 shuwen2 和 shuwen3 加入集群
+在每个 worker 节点执行你刚刚在主节点上记录的 kubeadm join 命令：
+sudo kubeadm join 192.168.10.2:6443 --token <TOKEN> --discovery-token-ca-cert-hash sha256:<HASH>
+
+查看节点（shuwen1 主节点）
+kubectl get nodes
+
+GPU 资源共享（可选）
+在 shuwen2、shuwen3 有 NVIDIA GPU 的话：
+1. 安装 NVIDIA 驱动和 container toolkit1.安装 NVIDIA 驱动和容器工具包
+sudo apt install -y nvidia-driver-525
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo systemctl restart containerd
+
+2. 安装 NVIDIA device plugin（在 master 节点）
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.1/nvidia-device-plugin.yml
+
+测试集群是否能使用多个节点的资源
+创建一个 Pod 并指定资源：
+# pod-test.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+spec:
+  containers:
+  - name: test
+    image: busybox
+    command: ["sleep", "3600"]
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "500m"
+
+部署测试：
+kubectl apply -f pod-test.yaml
+kubectl describe pod test-pod
+
+
+
+禁用防火墙（测试环境）： 为了简化设置，建议暂时禁用所有节点的防火墙。
+sudo ufw disable
+主机名解析： 确保所有节点可以通过主机名互相解析，或者在 /etc/hosts 文件中添加所有节点的 IP 和主机名映射。
+例如，在每台机器上编辑 /etc/hosts：
+# sudo nano /etc/hosts
+192.168.10.2 shuwen1
+192.168.10.3 shuwen2
+192.168.10.4 shuwen3
+
+Kubernetes所有节点准备工作
+# 1. 更新包索引并升级系统
+echo "--- 步骤 1: 更新包索引并升级系统 ---"
+sudo apt-get update
+sudo apt-get upgrade -y
+echo "系统更新完成。"
+
+# 2. 禁用 Swap (非常重要！Kubernetes 要求禁用 Swap)
+echo "--- 步骤 2: 禁用 Swap ---"
+sudo swapoff -a # 临时禁用 swap
+# 永久禁用 swap：编辑 /etc/fstab 文件，在 swap 行前面添加 # 注释掉
+sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+echo "Swap 已禁用并从 /etc/fstab 中注释掉。"
+
+# 3. 配置内核模块和系统参数 (为 Kubernetes 准备)
+echo "--- 步骤 3: 配置内核模块和系统参数 ---"
+# 确保 br_netfilter 模块被加载
+sudo modprobe br_netfilter
+echo "br_netfilter 模块已加载。"
+
+# 开启 IPv4 转发和 bridge-nf-call-iptables
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
+
+sudo sysctl --system # 应用 sysctl 配置
+echo "内核参数配置完成。"
+
+# 4. 安装 Docker Engine (容器运行时)
+echo "--- 步骤 4: 安装 Docker Engine ---"
+# 卸载旧版本 (如果存在)
+sudo apt-get remove -y docker docker-engine docker.io containerd runc
+
+# 安装 Docker CE 的依赖
+sudo apt-get install -y ca-certificates curl gnupg lsb-release
+
+# 添加 Docker 官方 GPG 密钥
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# 添加 Docker APT 仓库
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 更新 APT 包索引
+sudo apt-get update
+
+# 安装 Docker CE, Docker CLI 和 containerd.io
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# 启动 Docker 服务并设置开机自启
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 配置 Docker 使用 systemd 作为 cgroup 驱动 (与 kubelet 保持一致，推荐)
+# 如果文件不存在则创建，如果存在则修改
+sudo mkdir -p /etc/docker
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2"
+}
+EOF
+sudo systemctl daemon-reload # 重新加载 systemd 配置
+sudo systemctl restart docker # 重启 Docker 服务
+echo "Docker Engine 安装和配置完成。"
+
+# 5. 安装 kubeadm, kubelet 和 kubectl
+echo "--- 步骤 5: 安装 kubeadm, kubelet 和 kubectl ---"
+# 下载 Kubernetes 软件包仓库的公共签名密钥 (使用 v1.33 的密钥，与您提供的链接一致)
+sudo mkdir -p -m 755 /etc/apt/keyrings # 确保目录存在且权限正确
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg # 允许非特权 APT 程序读取此密钥环
+
+# 添加合适的 Kubernetes APT 仓库 (使用 v1.33)
+# 注意：这里我们覆盖了 /etc/apt/sources.list.d/kubernetes.list 中的所有现存配置
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list # 有助于让诸如 command-not-found 等工具正常工作
+
+# 更新 APT 包索引
+sudo apt-get update
+
+# 安装 kubeadm, kubelet, kubectl
+sudo apt-get install -y kubeadm kubelet kubectl
+
+# 锁定版本，防止自动升级导致兼容性问题 (推荐)
+sudo apt-mark hold kubeadm kubelet kubectl
+echo "kubeadm, kubelet, kubectl 安装完成并已锁定版本。"
+
+# 6. 验证安装
+echo "--- 步骤 6: 验证安装 ---"
+kubeadm version
+kubectl version --short
+systemctl status kubelet # 验证 kubelet 是否正在运行且状态良好
+echo "安装验证完成。请确保 kubelet 状态为 active (running)。"
+
+echo "--- 所有节点的准备工作完成！请确保在所有三台服务器上都执行了以上所有命令。---"
+
+第二部分：主节点配置 (shuwen1 - 192.168.10.2 上执行)
+# 1. 初始化 Kubernetes 控制平面 (Master Node)
+echo "--- 步骤 1: 初始化 Kubernetes 控制平面 ---"
+# --pod-network-cidr=10.244.0.0/16 是 Flannel 网络插件的默认 CIDR
+# --apiserver-advertise-address 指定 API Server 监听的 IP 地址，应为本机 IP
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.10.2
+
+# !!! 非常重要 !!!
+# 上述命令执行成功后，会输出以下关键信息：
+# 1. 配置 kubectl 的命令 (您将在下一步执行)
+# 2. 将工作节点加入集群的 `kubeadm join` 命令。请务必复制并保存此命令！
+#    它会包含一个 token 和一个 discovery-token-ca-cert-hash。
+#    例如：kubeadm join 192.168.10.2:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+#    这个命令将在工作节点上使用。
+
+echo "Kubernetes 控制平面初始化完成。请务必复制并保存 'kubeadm join' 命令！"
+
+# 2. 配置 kubectl (使当前用户可以与集群交互)
+echo "--- 步骤 2: 配置 kubectl ---"
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+echo "kubectl 配置完成。"
+
+# 3. 安装网络插件 (这里使用 Flannel)
+echo "--- 步骤 3: 安装网络插件 (Flannel) ---"
+# Flannel 是一个简单的网络插件，它依赖于 --pod-network-cidr=10.244.0.0/16
+kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+echo "Flannel 网络插件安装完成。可能需要一些时间来启动所有 Pod。"
+
+# 4. 验证主节点状态
+echo "--- 步骤 4: 验证主节点状态 ---"
+kubectl get nodes
+# 刚开始时，主节点可能显示为 NotReady 几分钟，等待网络插件启动后会变为 Ready。
+# 确保 'STATUS' 列显示为 'Ready'。
+
+第三部分：工作节点加入集群 (shuwen2, shuwen3 上执行)
+# 在 shuwen2 和 shuwen3 上分别执行以下命令：
+echo "--- 步骤 1: 将工作节点加入集群 ---"
+
+# 使用您在主节点上 `kubeadm init` 命令输出中复制的完整 `kubeadm join` 命令。
+# 示例 (请替换为您的实际命令):
+# sudo kubeadm join 192.168.10.2:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+# 将 <token> 和 <hash> 替换为实际值
+# 例如：
+sudo kubeadm join 192.168.10.2:6443 --token abcdef.0123456789abcdef --discovery-token-ca-cert-hash sha256:76543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210
+echo "工作节点加入集群命令已执行。"
+
+# 验证工作节点状态 (回到主节点 shuwen1 上执行)
+# 在主节点上运行此命令，您应该看到所有节点都显示为 'Ready' 状态。
+# kubectl get nodes
+
+第四部分：GPU 资源共享 (NVIDIA 设备插件)
+# 1. 确保已安装 NVIDIA 驱动程序和 NVIDIA Container Toolkit
+echo "--- 步骤 1: 确保已安装 NVIDIA 驱动程序和 NVIDIA Container Toolkit ---"
+# 如果您在之前的步骤中已经通过 ubuntu-drivers autoinstall 或其他方式安装了驱动，
+# 并且 nvidia-smi 命令正常工作，则跳过驱动安装。
+# 否则，请参考我之前给出的 NVIDIA 驱动安装步骤。
+
+# 安装 NVIDIA Container Toolkit
+# 这是 Docker 能够使用 NVIDIA GPU 的关键组件
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+      && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+      && curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker # 重启 Docker 服务以应用新的配置
+
+echo "NVIDIA Container Toolkit 安装完成。"
+
+# 2. 部署 NVIDIA 设备插件
+echo "--- 步骤 2: 部署 NVIDIA 设备插件 ---"
+# 这个插件会作为 DaemonSet 运行在每个节点上，自动发现 GPU 资源并向 Kubernetes 汇报。
+# 请确保您在主节点上执行此命令，或者在任何一个已配置 kubectl 的节点上执行。
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/gpu-operator/master/deployments/gpu-operator/nvidia-device-plugin.yaml
+
+echo "NVIDIA 设备插件部署完成。可能需要一些时间来启动 Pod。"
+
+# 3. 验证 GPU 资源 (回到主节点 shuwen1 上执行)
+echo "--- 步骤 3: 验证 GPU 资源 ---"
+# 查看节点是否已识别 GPU 资源
+kubectl get nodes -o yaml | grep -A5 "nvidia.com/gpu"
+# 您应该看到类似 'nvidia.com/gpu: 1' (如果有一个 GPU) 或更多数量的资源。
+
+# 检查设备插件 Pod 的状态
+kubectl get pods -n kube-system -l app=nvidia-device-plugin
+# 确保所有 Pod 都处于 'Running' 状态。
+
+echo "GPU 资源配置完成。现在您可以在 Pod 定义中请求 GPU 资源了。"
+
+如何使用 GPU 资源 (示例 Pod)
+一旦 NVIDIA 设备插件部署成功，您就可以在您的 Pod 定义中请求 GPU 资源。例如：
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-test-pod
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: cuda-container
+      image: nvcr.io/nvidia/cuda:12.1.0-base-ubuntu22.04 # 使用 NVIDIA 官方 CUDA 镜像
+      command: ["nvidia-smi"] # 简单运行 nvidia-smi 来测试 GPU 是否可用
+      resources:
+        limits:
+          nvidia.com/gpu: 1 # 请求 1 个 GPU
+将上述 YAML 保存为 gpu-pod.yaml，然后在主节点上运行：
+kubectl apply -f gpu-pod.yaml
+kubectl logs gpu-test-pod
+
+https://kubernetes.io/zh-cn/docs/setup/production-environment/tools/
+需要在每台机器上安装以下的软件包：
+kubeadm：用来初始化集群的指令。
+kubelet：在集群中的每个节点上用来启动 Pod 和容器等。
+kubectl：用来与集群通信的命令行工具。
+在 Linux 系统中安装并设置 kubectl
+https://kubernetes.io/zh-cn/docs/tasks/tools/install-kubectl-linux/
+1.更新 apt 包索引，并安装使用 Kubernetes apt 仓库所需要的包
+sudo apt-get update
+# apt-transport-https 可以是一个虚拟包；如果是这样，你可以跳过这个包
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
+2.下载 Kubernetes 软件包仓库的公共签名密钥。 同一个签名密钥适用于所有仓库，因此你可以忽略 URL 中的版本信息：
+# 如果 `/etc/apt/keyrings` 目录不存在，则应在 curl 命令之前创建它，请阅读下面的注释。
+# sudo mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg # allow unprivileged APT programs to read this keyring   
+3.添加合适的 Kubernetes apt 仓库。如果你想用 v1.33 之外的 Kubernetes 版本， 请将下面命令中的 v1.33 替换为所需的次要版本：
+# 这会覆盖 /etc/apt/sources.list.d/kubernetes.list 中的所有现存配置
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list   # 有助于让诸如 command-not-found 等工具正常工作
+4.更新 apt 包索引，然后安装 kubectl：
+sudo apt-get update
+sudo apt-get install -y kubectl
+
+所有节点都执行以下操作（含 master）
+1. 系统准备
+sudo apt-get update && sudo apt-get upgrade -y
+sudo swapoff -a
+sudo sed -i '/ swap / s/^/#/' /etc/fstab
+sudo modprobe br_netfilter
+
+# 永久开启必要 sysctl 参数
+sudo tee /etc/sysctl.d/k8s.conf <<EOF
+net.bridge.bridge-nf-call-iptables=1
+net.bridge.bridge-nf-call-ip6tables=1
+net.ipv4.ip_forward=1
+EOF
+
+sudo sysctl --system
+2.安装 containerd（推荐容器运行时）
+sudo apt-get install -y containerd
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml >/dev/null
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+3.安装 Kubernetes 组件（建议使用阿里源或 K8s 官方新源）
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
+
+# 添加 keyring
+sudo mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+sudo chmod 644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+# 添加源
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo chmod 644 /etc/apt/sources.list.d/kubernetes.list
+
+# 安装组件
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+三、在 shuwen1（主节点）执行 master 初始化
+sudo kubeadm init --apiserver-advertise-address=192.168.10.2 --pod-network-cidr=10.244.0.0/16
+初始化成功后：
+1.保存 kubeadm join 命令，等会儿在 node 节点使用。
+2.配置 kubectl（在 master 节点）：
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+
+安装网络插件（例如 Flannel）
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+四、在 shuwen2 / shuwen3 上执行（加入集群）
+在这两个节点上执行你在 master 初始化时输出的 kubeadm join 命令，例如：
+sudo kubeadm join 192.168.10.2:6443 --token <your-token> \
+    --discovery-token-ca-cert-hash sha256:<your-hash>
+
+五、验证集群状态（在 master 上）
+kubectl get nodes
+kubectl get pods -A
+kubectl cluster-info
+
+六、GPU 资源共享（可选）
+如果三台机器有 NVIDIA GPU，需：
+安装 NVIDIA 驱动
+安装 NVIDIA Device Plugin for Kubernetes
+应用 YAML 部署插件：
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.1/nvidia-device-plugin.yml
+
+七、资源调度与统一使用
+1. 00-node-prepare.sh （所有节点都必须先执行一次）
+#!/usr/bin/env bash
+# 00-node-prepare.sh
+# 通用初始化：关闭 swap、配置内核、安装 containerd + kubeadm/kubelet/kubectl
+
+set -euo pipefail
+K8S_VERSION="1.28"
+ARCH=$(dpkg --print-architecture)
+
+echo "[Step 1] 禁用 swap"
+swapoff -a
+sed -i '/ swap / s/^/#/' /etc/fstab
+
+echo "[Step 2] 内核模块 & sysctl"
+modprobe br_netfilter
+cat <<'EOF' >/etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+sysctl --system
+
+echo "[Step 3] 安装 containerd"
+apt-get update -y
+apt-get install -y containerd
+mkdir -p /etc/containerd
+containerd config default >/etc/containerd/config.toml
+sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+systemctl restart containerd
+systemctl enable containerd
+
+echo "[Step 4] 添加 Kubernetes APT 源"
+apt-get install -y apt-transport-https ca-certificates curl gnupg
+mkdir -p -m 755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/Release.key \
+  | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/deb/ /" \
+  >/etc/apt/sources.list.d/kubernetes.list
+
+echo "[Step 5] 安装 kubeadm kubelet kubectl ${K8S_VERSION}.x"
+apt-get update -y
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+systemctl enable kubelet
+
+echo "=== 节点通用准备完成 ==="
+
+sudo chmod +x 00-node-prepare.sh
+sudo ./00-node-prepare.sh
+
+2. 10-master-init.sh （仅在 shuwen1 主节点执行）
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+#!/usr/bin/env bash
+# 10-master-init.sh
+# 初始化控制平面，安装 Flannel，并生成 join 脚本供工作节点使用
+
+set -euo pipefail
+MASTER_IP="192.168.10.2"
+POD_CIDR="10.244.0.0/16"
+
+echo "[Master] 初始化 kubeadm"
+kubeadm init --apiserver-advertise-address=${MASTER_IP} --pod-network-cidr=${POD_CIDR} -v 5
+
+echo "[Master] 配置 kubectl"
+mkdir -p $HOME/.kube
+cp /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+echo "[Master] 安装 Flannel 网络插件"
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+echo "[Master] 生成工作节点 join 命令脚本 /root/join.sh"
+kubeadm token create --print-join-command >/root/join.sh
+chmod +x /root/join.sh
+cat /root/join.sh
+
+echo "=== 控制平面安装完成！请将 /root/join.sh 复制到工作节点并执行 ==="
+
+3. 20-worker-join.sh （在 shuwen2、shuwen3执行）
+#!/usr/bin/env bash
+# 20-worker-join.sh
+# 调用 master 生成的 join.sh 加入集群
+
+set -euo pipefail
+
+if [[ ! -f /root/join.sh ]]; then
+  echo "未找到 /root/join.sh，请先从 master 节点复制该文件！"
+  exit 1
+fi
+
+echo "[Worker] 加入 Kubernetes 集群..."
+bash /root/join.sh
+
+echo "=== 工作节点已成功加入集群 ==="
+
+使用顺序
+1.三台机器都执行
+chmod +x 00-node-prepare.sh
+sudo ./00-node-prepare.sh
+2.在 shuwen1 (192.168.10.2) 执行
+chmod +x 10-master-init.sh
+sudo ./10-master-init.sh
+3.将 /root/join.sh 从 shuwen1 复制到 shuwen2 / shuwen3
+4.在 shuwen2 / shuwen3 执行
+chmod +x 20-worker-join.sh
+sudo ./20-worker-join.sh
+5.回到 master 验证
+kubectl get nodes
+
+GPU 支持（如有 NVIDIA GPU）
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.14.1/nvidia-device-plugin.yml
+
+
+1.更新包索引并升级系统
+sudo apt-get update
+sudo apt-get upgrade -y
+2.安装 Docker Engine
+卸载旧版本
+sudo apt-get remove docker docker-engine docker.io containerd runc
+安装依赖项
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+启动 Docker 服务并设置开机自启
+sudo systemctl start docker
+sudo systemctl enable docker
+3.添加 Kubernetes 官方仓库
+curl -fsS https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/kubernetes-archive-keyring.gpg
+4.配置 apt 软件包源
+/etc/apt/sources.list.d/kubernetes.list
+# 对于 Ubuntu 20.04 (Focal Fossa)
+echo "deb [trusted=yes] https://packages.cloud.google.com/apt <version> main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+# 替换版本号，例如使用最新的稳定版
+echo "deb [trusted=yes] https://packages.cloud.google.com/apt kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+5.安装 kubeadm, kubelet 和 kubectl
+sudo apt-get update
+sudo apt-get install -y kubeadm kubelet kubectl
+sudo snap install kubeadm --classic
+sudo snap install kubectl --classic
+6.验证安装
+检查版本
+kubeadm version
+kubectl version --short
+验证 kubelet 是否正在运行且状态良好
+systemctl status kubelet  # 可能需要 `sudo` 权限才能看到，或者使用 journalctl 查看日志：journalctl -u kubelet.service
+
+
+初始化主节点
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+配置 kubectl（主节点上）
+mkdir -p $HOME/.kube
+sudo cp /etc/kubernetes/admin.conf ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+安装网络插件（例如 flannel）
+
+查看节点
+kubectl get nodes
+
+

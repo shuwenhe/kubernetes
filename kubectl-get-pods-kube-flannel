@@ -1,0 +1,2 @@
+sudo kubectl get pods -n kube-flannel
+sudo kubectl get pods -A | grep flannel

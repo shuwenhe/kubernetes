@@ -1,0 +1,12 @@
+名称 : shuwen-admin-5cc84f46d5-4c7mc
+状态 : Running
+节点 : virtual-kubelet-cn-beijing-j
+命名空间 : shuwen
+创建时间 : 2022-04-08 19:13:18
+Pod IP : 192.168.40.125
+ECI CPU / Memory 规格
+0.5 vCpu / 1 GB
+可用区
+cn-beijing-j
+Pod IP
+192.168.40.125

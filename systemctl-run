@@ -1,0 +1,8 @@
+# containerd 是否已启用自动启动
+systemctl is-enabled containerd
+# kubelet 是否启用了自动启动
+systemctl is-enabled kubelet
+# 给 worker 节点配置 kubelet 自动启动
+sudo systemctl enable kubelet
+
+

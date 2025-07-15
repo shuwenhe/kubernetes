@@ -1,0 +1,8 @@
+kubectl get pods --all-namespaces
+kubectl logs -f iot-java-demo-559db88cd8-6vdtn -n shuwen
+kubectl logs -f shuwen-admin-5cc84f46d5-sthfk -n shuwen
+kubectl logs -f shuwen-service-api-6665c8ccbb-d6b4d -n shuwen
+kubectl logs -f shuwen-service-realtime-6698d8447-7mc5j -n shuwen
+kubectl logs -f iot-data-storage-68d78ccbbf-7zpvw -n shuwen
+kubectl logs -f iot-data-storage-85d68746d8-dp8b2 -n shuwen
+kubectl logs -f iot-java-demo-6dcb4684b4-4njx9 -n shuwen > variable.log 2>&1

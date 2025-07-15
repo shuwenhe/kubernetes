@@ -1,0 +1,9 @@
+# 1. 安装 nvidia-container-toolkit
+sudo apt-get install -y nvidia-container-toolkit
+
+# 2. 配置 containerd 使用 NVIDIA runtime
+sudo nvidia-ctk runtime configure --runtime=containerd
+
+# 3. 重启 containerd
+sudo systemctl restart containerd
+

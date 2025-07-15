@@ -1,0 +1,2 @@
+sudo kubectl describe pod nginx-5869d7778c-lzd9m
+sudo kubectl describe pod -n kube-system -l k8s-app=metrics-server

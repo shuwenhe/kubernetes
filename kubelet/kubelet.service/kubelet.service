@@ -1,0 +1,15 @@
+[Unit]
+Description=Kubernetes Kubelet
+Documentation=https://kubernetes.io/docs/home/
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/kubelet
+Restart=always
+RestartSec=10
+LimitNOFILE=1048576
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+

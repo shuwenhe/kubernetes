@@ -1,0 +1,3 @@
+sudo kubectl label node shuwen2 node-role.kubernetes.io/worker=worker
+
+

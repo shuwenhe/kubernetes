@@ -1,0 +1,4 @@
+sudo kubectl create deployment nginx --image=nginx
+sudo kubectl expose deployment nginx --port=80 --type=NodePort
+sudo kubectl get svc nginx
+

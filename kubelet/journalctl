@@ -1,0 +1,3 @@
+journalctl -xeu kubelet
+sudo journalctl -u kubelet -f
+

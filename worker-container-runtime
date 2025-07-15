@@ -1,0 +1,20 @@
+步骤 1：修改 kubelet 参数配置
+sudo vi /etc/systemd/system/kubelet.service.d/10-runtime.conf
+将其中含有 --container-runtime 的行 删除 或 注释掉。
+Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+步骤 2：重新加载并重启 kubelet
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+步骤 3：检查状态
+sudo systemctl status kubelet
+确认没有报错后，继续执行主节点生成的 kubeadm join 命令
+sudo kubeadm join 192.168.10.2:6443
+成功后，在主节点运行：
+kubectl get nodes
+推荐你将 10-runtime.conf 内容改为如下：
+[Service]
+Environment="KUBELET_EXTRA_ARGS=--container-runtime-endpoint=unix:///run/containerd/containerd.sock"
+
+
+

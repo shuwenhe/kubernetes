@@ -1,0 +1,5 @@
+kubectl run nginx --image=nginx
+kubectl get pods
+kubectl exec -it nginx /bin/bash
+kubectl logs -f nginx
+

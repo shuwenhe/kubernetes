@@ -1,0 +1,2 @@
+ip route show # Look for a line starting with "default via"
+

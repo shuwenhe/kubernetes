@@ -1,0 +1,62 @@
+create-service
+https://cs.console.aliyun.com/?spm=a2c63.p38356.0.0.5fb93bb5Xcjqum#/k8s/cluster/ccbdf99b67d43401ca4efa97df9c57ca1/v2/service/list?clusterType=Ask&profile=Serverless&state=running&ns=shuwen&region=cn-beijing
+container-service-for-kubernetes:manage-services
+https://www.alibabacloud.com/help/zh/container-service-for-kubernetes/latest/manage-services-1
+
+1.shuwen-admin
+名称：shuwen-admin
+类型：虚拟集群IP
+端口映射：
+	名称：http-8000
+	服务端口：8000
+	容器端口：8000
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：shuwen-admin
+
+2.shuwen-service-api
+名称：shuwen-service-api
+类型：虚拟集群IP
+端口映射：
+	名称：http-8990
+	服务端口：8990
+	容器端口：8990
+	协议：TCP
+注解：
+标签:
+	名称：app
+	值：shuwen-service-api
+	
+3.shuwen-service-realtime
+名称：shuwen-service-realtime
+类型：虚拟集群IP
+端口映射：
+	名称：http-8991
+	服务端口：8991
+	容器端口：8991
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：shuwen-service-realtime
+	
+4.shuwen-admin-ui
+名称：shuwen-admin-ui
+类型：虚拟集群IP
+端口映射：
+	名称：http-9527
+	服务端口：9527
+	容器端口：9527
+	协议：TCP
+注解：
+	名称：kubesphere.io/creator
+	值：admin
+标签:
+	名称：app
+	值：shuwen-admin-ui

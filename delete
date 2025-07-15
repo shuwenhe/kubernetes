@@ -1,0 +1,5 @@
+# 根据yaml文件删除对应的资源，但是yaml文件并不会被删除，这样更加高效
+kubectl delete -f demo-deployment.yaml
+kubectl delete -f demo-service.yaml
+# 也可以通过具体的资源名称来进行删除，使用这个删除资源，同时删除deployment和service资源
+kubectl delete 具体的资源名称

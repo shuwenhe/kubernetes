@@ -1,0 +1,6 @@
+sudo kubectl get pods -A
+(base) shuwen1@shuwen1:~/kubernetes$ sudo kubectl get pods -o wide
+NAME                     READY   STATUS              RESTARTS   AGE   IP           NODE      NOMINATED NODE   READINESS GATES
+nginx-5869d7778c-lzd9m   0/1     ContainerCreating   0          26m   10.244.1.2   shuwen2   <none>           <none>
+(base) shuwen1@shuwen1:~/kubernetes$ 
+

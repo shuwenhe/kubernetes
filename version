@@ -1,0 +1,8 @@
+kubeadm version
+kubelet --version
+kubectl version --client
+
+apt-cache madison kubelet | grep -E '1\.(2[8-9]|30)' | head -n 10
+kubectl version --short
+
+

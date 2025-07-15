@@ -1,0 +1,5 @@
+#安装 Metrics Server 查看实时资源使用
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+kubectl top nodes
+kubectl top pods --all-namespaces
+

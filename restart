@@ -1,0 +1,4 @@
+sudo kubeadm reset -f
+sudo systemctl restart containerd
+sudo systemctl restart kubelet
+

@@ -1,0 +1,94 @@
+1.Makefile
+2.把shuwen-service的.github目录复制过来
+3.配置下Actions secrets
+https://github.com/shuwen-service/sid-ask/settings/secrets/actions
+Name: DOCKER_PASSWORD
+Value: NIHAOSID86@2020ALY
+Name: DOCKER_USERNAME
+Value: shuwen_ALY
+4.构建结果
+https://github.com/shuwen-service/sid-ask/actions
+5.镜像仓库查看最新镜像
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+  labels:
+    app: sid-ask
+  name: sid-ask
+  namespace: shuwen
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: sid-ask
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: sid-ask
+    spec:
+      containers:
+        - args:
+            - server
+            - '-c=/etc/sid-ask/config/settings.dev.yml'
+          command:
+            - /sid-ask
+          image: 'registry.cn-beijing.aliyuncs.com/shuwen/sid-ask:latest'
+          imagePullPolicy: Always
+          name: sid-ask
+          ports:
+            - containerPort: 8000
+              name: http-8000
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 500m
+              memory: 200Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/localtime
+              name: host-time
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: docker-screct
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - hostPath:
+            path: /etc/localtime
+            type: ''
+          name: host-time
+6.让外网访问,创建service
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  labels:
+    app: sid-ask
+  name: sid-ask
+  namespace: shuwen
+spec:
+  ports:
+    - name: http-8000
+      port: 8000
+      protocol: TCP
+      targetPort: 8000
+  selector:
+    app: sid-ask
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+

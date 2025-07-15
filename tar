@@ -1,0 +1,2 @@
+tar -xzvf kubernetes-client-darwin-amd64.tar.gz
+

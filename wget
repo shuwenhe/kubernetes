@@ -1,0 +1,2 @@
+wget https://dl.k8s.io/v1.33.2/kubernetes-client-darwin-amd64.tar.gz
+

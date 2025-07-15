@@ -1,0 +1,4 @@
+sudo systemctl enable containerd
+sudo systemctl start containerd
+sudo systemctl status containerd
+

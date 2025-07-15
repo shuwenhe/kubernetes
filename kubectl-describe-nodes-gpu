@@ -1,0 +1,3 @@
+sudo kubectl get nodes -o=custom-columns=NODE:.metadata.name,CPU:.status.allocatable.cpu,MEM:.status.allocatable.memory,GPU:.status.allocatable.nvidia\.com/gpu
+
+

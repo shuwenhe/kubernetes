@@ -1,0 +1,16 @@
+kubectl get pods --all-namespaces
+kubectl删除pod命令
+shuwen-service-api
+kubectl get pod -n shuwen | grep shuwen-service-api | awk '{print $1}' | xargs kubectl -n shuwen delete pod
+shuwen-service-realtime
+kubectl get pod -n shuwen | grep shuwen-service-realtime | awk '{print $1}' | xargs kubectl -n shuwen delete pod
+shuwen-admin
+kubectl get pod -n shuwen | grep shuwen-admin | awk '{print $1}' | xargs kubectl -n shuwen delete pod
+iot-java-demo
+kubectl get pod -n shuwen | grep iot-java-demo | awk '{print $1}' | xargs kubectl -n shuwen delete pod
+sid-ask
+kubectl get pod -n shuwen | grep sid-ask | awk '{print $1}' | xargs kubectl -n shuwen delete pod
+负载均衡 SLB
+https://slb.console.aliyun.com/slb/cn-beijing/certs
+证书管理->替换证书
+
