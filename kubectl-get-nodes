@@ -1,2 +1,8 @@
 sudo kubectl get nodes -o wide
 sudo kubectl get nodes
+(base) shuwen1@shuwen1:~/kubernetes$ sudo kubectl get nodes
+NAME      STATUS   ROLES           AGE     VERSION
+shuwen1   Ready    control-plane   5h14m   v1.33.2
+shuwen2   Ready    worker          4h46m   v1.33.2
+(base) shuwen1@shuwen1:~/kubernetes$ 
+
