@@ -1,0 +1,2 @@
+登录 shuwen2（Pod 所在节点）检查
+ls /run/flannel/subnet.env
