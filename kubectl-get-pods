@@ -1,3 +1,4 @@
+sudo kubectl get pods -o wide
 sudo kubectl get pods -A
 (base) shuwen1@shuwen1:~/kubernetes$ sudo kubectl get pods -o wide
 NAME                     READY   STATUS              RESTARTS   AGE   IP           NODE      NOMINATED NODE   READINESS GATES
