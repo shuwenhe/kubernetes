@@ -1,1 +1,2 @@
+sudo kubectl delete daemonset kube-flannel-ds -n kube-flannel
 sudo kubectl describe pod nginx
