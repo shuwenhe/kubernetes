@@ -1,1 +1,3 @@
+kubectl delete pod -l app=nginx
 kubectl delete pod nginx-5869d7778c-7wmvg
+
